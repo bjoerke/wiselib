@@ -32,3 +32,7 @@ tags
 dot/
 symbols.c
 symbols.h
+apps/android_apps/*/bin
+apps/android_apps/*/gen
+apps/android_apps/*/obj
+apps/android_apps/*/libs/armeabi

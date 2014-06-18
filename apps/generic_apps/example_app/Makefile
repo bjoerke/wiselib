@@ -10,6 +10,7 @@ all: shawn
 # all: isense
 # all: tinyos-tossim
 # all: tinyos-micaz
+# all: android
 
 export APP_SRC=example_app.cpp
 export BIN_OUT=example_app

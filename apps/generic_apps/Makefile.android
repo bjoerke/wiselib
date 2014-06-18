@@ -1,0 +1,12 @@
+all: android
+
+WISELIB_APP_SOURCES=$(shell ls)
+CURRENT_APP_PATH=$(shell pwd)
+
+android:
+	cp $(WISELIB_APP_SOURCES) $(WISELIB_PATH_TESTING)/external_interface/android/standalone/jni/
+	ndk-build -C $(WISELIB_PATH_TESTING)/external_interface/android/standalone/jni/
+	cd $(WISELIB_PATH_TESTING)/external_interface/android/standalone/jni/;rm $(WISELIB_APP_SOURCES)
+	
+clean:
+	ndk-build -C $(WISELIB_PATH_TESTING)/external_interface/android/standalone/jni/ clean

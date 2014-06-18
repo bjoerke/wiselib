@@ -1,0 +1,6 @@
+# DO NOT RUN THIS MAKEFILE DIRECTLY, USE THE TOP LEVEL MAKEFILE
+
+.PHONY: jni-libs
+
+jni-libs:
+	$(NDK_PATH)/ndk-build

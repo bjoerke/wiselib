@@ -32,6 +32,9 @@ endif
 ## Compile Application for specific OSs
 #####
 
+android:
+	make -f $(WISELIB_BASE)/apps/generic_apps/Makefile.android WISELIB_EXIT_MAIN=$(WISELIB_EXIT_MAIN) ADD_CXXFLAGS=$(ADD_CXXFLAGS)
+
 arduino:
 	$(MAKE) -f $(WISELIB_BASE)/apps/generic_apps/Makefile.arduino arduino ADD_CXXFLAGS=$(ADD_CXXFLAGS)
 
