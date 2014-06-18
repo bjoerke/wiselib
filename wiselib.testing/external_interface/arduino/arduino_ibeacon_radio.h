@@ -17,8 +17,8 @@
 ** If not, see <http://www.gnu.org/licenses/>.                           **
 ***************************************************************************/
 
-#ifndef ARDUINO_BLE_RADIO_H
-#define ARDUINO_BLE_RADIO_H
+#ifndef ARDUINO_IBEACON_RADIO_H
+#define ARDUINO_IBEACON_RADIO_H
 
 #if ARDUINO_USE_IBEACON
 
