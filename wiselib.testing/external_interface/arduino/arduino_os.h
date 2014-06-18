@@ -56,6 +56,10 @@ namespace wiselib {
 #include "external_interface/arduino/arduino_xbeeS2_radio.h"
 #endif
 
+#if ARDUINO_USE_IBEACON
+#include "external_interface/arduino/arduino_ibeacon_radio.h"
+#endif
+
 #include "external_interface/arduino/arduino_timer.h"
 #include "util/serialization/endian.h"
 #include <algorithms/rand/kiss.h>
@@ -103,11 +107,15 @@ namespace wiselib
       typedef ArduinoXBeeRadio<ArduinoOsModel> XBeeRadio;
 	  typedef XBeeRadio Radio;
 #endif
-
 #if ARDUINO_USE_XBEES2
       typedef ArduinoXBeeS2Radio<ArduinoOsModel> XBeeS2Radio;
       	  typedef XBeeS2Radio Radio;
 #endif
+#if ARDUINO_USE_IBEACON
+      typedef ArduinoIBeaconRadio<ArduinoOsModel> IBeaconRadio;
+      	  typedef IBeaconRadio Radio;
+#endif
+
       typedef ArduinoSdCard<ArduinoOsModel> BlockMemory;
       typedef Kiss<ArduinoOsModel> Rand;
 
