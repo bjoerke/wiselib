@@ -28,7 +28,7 @@
 #include "android_onload.h"
 #include "android_debug.h"
 #include "android_timer.h"
-#include "android_radio.h"
+#include "android_wlan_radio.h"
 #include "android_clock.h"
 #include "android_accelerometer.h"
 #include "android_battery.h"
@@ -58,8 +58,13 @@ namespace wiselib
       typedef uint8_t block_data_t;
 
       typedef AndroidDebug<AndroidOsModel> Debug;
-      typedef AndroidRadio<AndroidOsModel> Radio;
+#ifdef ANDROID_USE_BLUETOOTH_LE_RADIO
       typedef AndroidBleRadio<AndroidOsModel> BleRadio;
+      typedef BleRadio Radio;
+#else
+      typedef AndroidWlanRadio<AndroidOsModel> WlanRadio;
+      typedef WlanRadio Radio;
+#endif
       typedef AndroidTimer<AndroidOsModel> Timer;
       typedef AndroidClock<AndroidOsModel> Clock;
       typedef AndroidAccelerometer<AndroidOsModel> Accelerometer;

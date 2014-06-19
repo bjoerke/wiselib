@@ -16,8 +16,8 @@
  ** License along with the Wiselib.                                       **
  ** If not, see <http://www.gnu.org/licenses/>.                           **
  ***************************************************************************/
-#ifndef ANDROID_RADIO_H
-#define ANDROID_RADIO_H
+#ifndef ANDROID_WLAN_RADIO_H
+#define ANDROID_WLAN_RADIO_H
 
 #include "android_types.h"
 #include "util/delegates/delegate.hpp"
@@ -54,12 +54,12 @@ namespace wiselib
    class WrapperThread;
 
    template<typename OsModel_P>
-   class AndroidRadio
+   class AndroidWlanRadio
    {
    public:
       typedef OsModel_P OsModel;
 
-      typedef AndroidRadio<OsModel> self_type;
+      typedef AndroidWlanRadio<OsModel> self_type;
       typedef self_type* self_pointer_t;
 
       //assuming ipv4
@@ -91,8 +91,8 @@ namespace wiselib
          MAX_MESSAGE_LENGTH = 255 ///< Maximal number of bytes in payload
       };
       // --------------------------------------------------------------------
-      AndroidRadio();
-      ~AndroidRadio() {};
+      AndroidWlanRadio();
+      ~AndroidWlanRadio() {};
 
       int send( node_id_t id, size_t len, block_data_t* data );
 
@@ -149,14 +149,14 @@ namespace wiselib
    class WrapperThread : public Wrapper
    {
    protected:
-      AndroidRadio<OsModel_P> *radio_;
+      AndroidWlanRadio<OsModel_P> *radio_;
    public:
       WrapperThread () {};
-      WrapperThread ( AndroidRadio<OsModel_P> *radio ) : radio_( radio ) {}
+      WrapperThread ( AndroidWlanRadio<OsModel_P> *radio ) : radio_( radio ) {}
 
       int get_size() const
       {
-         return AndroidRadio<OsModel_P>::MAX_MESSAGE_LENGTH;
+         return AndroidWlanRadio<OsModel_P>::MAX_MESSAGE_LENGTH;
       }
 
       int* get_socket() const
@@ -166,7 +166,7 @@ namespace wiselib
 
       void received( unsigned char* data, uint8_t len, unsigned int from )
       {
-         radio_->received( data, static_cast< typename AndroidRadio<OsModel_P>::size_t > ( len ), from );
+         radio_->received( data, static_cast< typename AndroidWlanRadio<OsModel_P>::size_t > ( len ), from );
       }
    };
    // -----------------------------------------------------------------------
@@ -246,12 +246,12 @@ out:
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   AndroidRadio<OsModel_P>::AndroidRadio():  lan_interface_( INTERFACE ), port_( PORT )
+   AndroidWlanRadio<OsModel_P>::AndroidWlanRadio():  lan_interface_( INTERFACE ), port_( PORT )
    {
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   int AndroidRadio<OsModel_P>::enable_radio()
+   int AndroidWlanRadio<OsModel_P>::enable_radio()
    {
       wrapped_this_ = new WrapperThread< OsModel_P >( this );
 
@@ -294,7 +294,7 @@ out:
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   int AndroidRadio<OsModel_P>::disable_radio()
+   int AndroidWlanRadio<OsModel_P>::disable_radio()
    {
       id_ = 0;
       broadcast_ = 0;
@@ -310,13 +310,13 @@ out:
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   typename AndroidRadio<OsModel_P>::node_id_t AndroidRadio<OsModel_P>::id()
+   typename AndroidWlanRadio<OsModel_P>::node_id_t AndroidWlanRadio<OsModel_P>::id()
    {
       return id_;
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   int AndroidRadio<OsModel_P>::
+   int AndroidWlanRadio<OsModel_P>::
    send( node_id_t dest, size_t len, block_data_t* data )
    {
 
@@ -336,11 +336,11 @@ out:
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
    template < class T,
-            void ( T::*TMethod )( typename AndroidRadio<OsModel_P>::node_id_t,
-                                  typename AndroidRadio<OsModel_P>::size_t,
-                                  typename AndroidRadio<OsModel_P>::block_data_t* ) >
+            void ( T::*TMethod )( typename AndroidWlanRadio<OsModel_P>::node_id_t,
+                                  typename AndroidWlanRadio<OsModel_P>::size_t,
+                                  typename AndroidWlanRadio<OsModel_P>::block_data_t* ) >
    int
-   AndroidRadio<OsModel_P>::
+   AndroidWlanRadio<OsModel_P>::
    reg_recv_callback( T* obj_pnt )
    {
 
@@ -357,7 +357,7 @@ out:
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   int AndroidRadio<OsModel_P>::
+   int AndroidWlanRadio<OsModel_P>::
    unreg_recv_callback( int idx )
    {
       android_radio_callbacks_[idx] = android_radio_delegate_t();
@@ -365,7 +365,7 @@ out:
    }
    // -----------------------------------------------------------------------
    template<typename OsModel_P>
-   void AndroidRadio<OsModel_P>::
+   void AndroidWlanRadio<OsModel_P>::
    received( unsigned char* data, size_t len, unsigned long from )
    {
       for ( unsigned int i = 0; i < MAX_INTERNAL_RECEIVERS; ++i  )

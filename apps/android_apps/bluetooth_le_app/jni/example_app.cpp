@@ -12,8 +12,8 @@
 
 typedef wiselib::AndroidOsModel Os;
 
-typedef Os::BleRadio::node_id_t node_id_t;
-typedef Os::BleRadio::block_data_t block_data_t;
+typedef Os::Radio::node_id_t node_id_t;
+typedef Os::Radio::block_data_t block_data_t;
 
 class ExampleApplication
 {
@@ -22,7 +22,7 @@ public:
    void init(Os::AppMainParameter& amp)
    {
       debug_ = new Os::Debug();
-      radio_ = new Os::BleRadio();
+      radio_ = new Os::Radio();
       radio_->setup(amp.jni_env, amp.wiselib_activity); //TODO remove this. AndroidBleRadio should get the env from somewhere else! but where???
       Os::Radio::block_data_t message[] = "Test\0";
       debug_->debug( "Hello World from Example Android Application!\n" );
