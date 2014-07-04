@@ -57,7 +57,7 @@ namespace wiselib
     */
 
    template<typename OsModel_P>
-   class AndroidBleRadio : public ExtendedRadioBase<OsModel_P, jobject, uint8_t, uint8_t>
+   class AndroidBleRadio : public ExtendedRadioBase<OsModel_P, jobject, uint8_t, uint8_t> //OsModel, NodeId, Size, BlockData
    {
    public:
       typedef OsModel_P OsModel;

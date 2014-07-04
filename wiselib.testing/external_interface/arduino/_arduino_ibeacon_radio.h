@@ -55,6 +55,7 @@ namespace wiselib
 {
 
    /**
+    * depricated!!!! (assumes old firmware!)
     * Implements the RadioModel for use with iBeacons
     * IMPORTANT: There are no dedicated nodes in the network
     *            You can just broadcast to all nodes (which means that the device acts as iBeacon

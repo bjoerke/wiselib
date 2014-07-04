@@ -56,8 +56,8 @@ namespace wiselib {
 #include "external_interface/arduino/arduino_xbeeS2_radio.h"
 #endif
 
-#if ARDUINO_USE_IBEACON
-#include "external_interface/arduino/arduino_ibeacon_radio.h"
+#if ARDUINO_USE_BLE_RADIO
+#include "external_interface/arduino/arduino_ble_radio.h"
 #endif
 
 #include "external_interface/arduino/arduino_timer.h"
@@ -111,9 +111,9 @@ namespace wiselib
       typedef ArduinoXBeeS2Radio<ArduinoOsModel> XBeeS2Radio;
       	  typedef XBeeS2Radio Radio;
 #endif
-#if ARDUINO_USE_IBEACON
-      typedef ArduinoIBeaconRadio<ArduinoOsModel> IBeaconRadio;
-      	  typedef IBeaconRadio Radio;
+#if ARDUINO_USE_BLE_RADIO
+      typedef ArduinoBleRadio<ArduinoOsModel> BleRadio;
+      	  typedef BleRadio Radio;
 #endif
 
       typedef ArduinoSdCard<ArduinoOsModel> BlockMemory;

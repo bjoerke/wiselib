@@ -11,9 +11,9 @@ As a result almost every source has been copied from there, expect the following
      apps/android_apps/example_app
 
  * new file have been added to implement iBeacon support:
-     wiselib.testing/external_interface/android/android_ibeacon_radio.h
+     wiselib.testing/external_interface/android/android_ble_radio.h
      apps/android_apps/bluetooth_le_app/*
-     wiselib.testing/external_interface/arduino/arduino_ibeacon_radio.h
+     [wiselib.testing/external_interface/arduino/_arduino_ibeacon_radio.h (deprecated)]
      wiselib.testing/external_interface/arduino/arduino_ble_radio.h
      apps/arduino_apps/bluetooth_le_app/*
 
@@ -30,11 +30,9 @@ How do I test it?
 	Act as an iBeacon:
 		(not possible due to Android API)
  * on Arduino:
-	iBeacon detection:
-		(work in progress)
-	Act as an iBeacon:
+	iBeacon detection + Act as an iBeacon:
 		You need the ITEAD BLE SHIELD (http://imall.iteadstudio.com/development-platform/arduino/shields/im130704001.html).
-		Flash the newest firmware (v526+) which is available at http://www.jnhuamao.cn/download_rom_en.asp?id=66
+		Flash my custom firmware which is available at https://github.com/bjoerke/HM-10-Firmware
 		Now set up the Jumpers correctly as descriped in apps/arduino_apps/bluetooth_le_app/ble_shield_test/ble_shield_test.ino
 		Finally you can compile apps/arduino_apps/bluetooth_le_app and flash it onto an Arduino (tested with Uno)
 

@@ -22,7 +22,7 @@ LIBS=-L$(ARDUINO_PATH) -Wl,--start-group -lsoftwareserial -larduino -Wl,--end-gr
 
 MCU=-mmcu=atmega328p
 CPU_SPEED=-DF_CPU=16000000UL
-CFLAGS=$(MCU) $(CPU_SPEED) -DARDUINO=1 -DARDUINO_WIRING_DIGITAL -DARDUINO_LITE -DARDUINO_STRING -DARDUINO_USE_IBEACON -Os -w \
+CFLAGS=$(MCU) $(CPU_SPEED) -DARDUINO=1 -DARDUINO_WIRING_DIGITAL -DARDUINO_LITE -DARDUINO_STRING -DARDUINO_USE_BLE_RADIO -Os -w \
 	-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums -fno-exceptions -fno-use-cxa-atexit
 
 PORT=/dev/ttyACM0

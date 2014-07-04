@@ -152,7 +152,7 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 
 	@Override
 	public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-		//printBeaconInfo(device, scanRecord, rssi);
+		printBeaconInfo(device, scanRecord, rssi);
 		//bluetoothAdapter.stopLeScan(this); bluetoothAdapter.startLeScan(this);  //TODO Android semms to detect certain device only once. this resets the adapter
 		onBleDataReceive(device, scanRecord, rssi);
 	}
