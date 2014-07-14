@@ -36,8 +36,8 @@ upload:
 
 logcat:
 	#$(SDK_PATH)/platform-tools/adb logcat *:$(LOG_PRIORITY)
-	#$(SDK_PATH)/platform-tools/adb logcat WiselibDebug:D *:S | ./coloredLogcat.py
-	$(SDK_PATH)/platform-tools/adb logcat *:D | ./coloredLogcat.py
+	$(SDK_PATH)/platform-tools/adb logcat WiselibDebug:D *:S | ./coloredLogcat.py
+	#$(SDK_PATH)/platform-tools/adb logcat *:D | ./coloredLogcat.py
 
 debug: upload logcat
 

@@ -39,6 +39,8 @@
 //the data is passed to all registered callbacks.
 static delegate4<void, JNIEnv*, jobject, jbyteArray, jint> onBleDataReceive;
 
+#define MAX_RECEIVERS 16
+
 namespace wiselib
 {
 
@@ -53,11 +55,18 @@ namespace wiselib
     * This class basically passes all calls to Java code which then utilises the
     * Android API to access all Bluetooth LE functions
     *
-    * @tparam OsModel_P Has to implement @ref os_concept "Os concept".
+    * \tparam OsModel_P Has to implement \ref os_concept "Os concept".
     */
 
    template<typename OsModel_P>
-   class AndroidBleRadio : public ExtendedRadioBase<OsModel_P, jobject, uint8_t, uint8_t> //OsModel, NodeId, Size, BlockData
+   class AndroidBleRadio : public ExtendedRadioBase<
+      OsModel_P,                       //OsModel
+      jobject,                         //NodeId
+      uint8_t,                         //Size
+      uint8_t,                         //Block Data
+      MAX_RECEIVERS,
+      BaseExtendedData<OsModel_P,int>  //ExtendedData
+      >
    {
    public:
       typedef OsModel_P OsModel;
@@ -68,7 +77,7 @@ namespace wiselib
       typedef jobject node_id_t;    //Type of node id - must be unique for a node in the network; a pointer to a Java BluetoothDevice is used for that
       typedef uint8_t block_data_t; //Data type used for raw data in message sending process. 
       typedef uint8_t size_t;       //Unsigned integer that represents length information. 
-      typedef BaseExtendedData<OsModel> ExtendedData; //extended data: link quality
+      typedef BaseExtendedData<OsModel, int> ExtendedData; //extended data: link quality
 
       enum ErrorCodes
       {
@@ -78,7 +87,7 @@ namespace wiselib
       };
       enum SpecialNodeIds
       {
-         // BROADCAST_ADDRESS   // Broadcasting is not supported since sending is not supported!
+         // BROADCAST_ADDRESS   // Broadcasting is not supported since Android supports Central Role only
          NULL_NODE_ID           = 0  // Unknown/No node id
       };
       enum Restrictions
@@ -101,7 +110,9 @@ namespace wiselib
        */
       int enable_radio()
       {
-         return jni_env_->CallBooleanMethod(wiselib_activity_, method_enable_) ? SUCCESS : ERR_UNSPEC;
+         JNIEnv* env;
+         jvm_->AttachCurrentThread(&env, NULL);
+         return env->CallBooleanMethod(wiselib_activity_, method_enable_) ? SUCCESS : ERR_UNSPEC;
       }
 
 
@@ -111,7 +122,9 @@ namespace wiselib
        */
       int disable_radio()
       {
-         return jni_env_->CallBooleanMethod(wiselib_activity_, method_disable_) ? SUCCESS : ERR_UNSPEC;
+         JNIEnv* env;
+         jvm_->AttachCurrentThread(&env, NULL);
+         return env->CallBooleanMethod(wiselib_activity_, method_disable_) ? SUCCESS : ERR_UNSPEC;
       }
 
 
@@ -126,32 +139,28 @@ namespace wiselib
       /**
        * Constructor
        */
-      AndroidBleRadio()
+      AndroidBleRadio(OsModel_P& os)
       {
-         ;
+         wiselib_activity_ = os.wiselib_activity;
+         JNIEnv* jni_env = os.jni_env;
+         jni_env->GetJavaVM(&jvm_);
+
+         jclass wiselib_class_ = jni_env->FindClass("com/ibralg/wiselib/WiselibActivity");
+
+         method_enable_  = jni_env->GetMethodID(wiselib_class_, "enableBluetoothLe", "()Z");
+         method_disable_ = jni_env->GetMethodID(wiselib_class_, "disableBluetoothLe", "()Z");
+         onBleDataReceive = delegate4<void, JNIEnv*, jobject, jbyteArray, jint>::
+            from_method<AndroidBleRadio<OsModel>, &AndroidBleRadio<OsModel>::onBleDataRecv>(this);
       }
 
       void onBleDataRecv(JNIEnv* env, jobject device, jbyteArray data, jint rssi)
       {
          jbyte* raw_data = env->GetByteArrayElements(data, NULL);
          jsize len = env->GetArrayLength(data);
-         extended_data_.set_link_metric( ((uint16_t) rssi)+(2<<31));  //TODO Android passes a SIGNED int, link metric is defined as UNSINGED int
-         ExtendedRadioBase<OsModel_P, node_id_t, size_t, block_data_t>
+         extended_data_.set_link_metric(rssi);
+         ExtendedRadioBase<OsModel_P, node_id_t, size_t, block_data_t, MAX_RECEIVERS, ExtendedData>
             ::notify_receivers((node_id_t) device, (size_t) len, (block_data_t*) raw_data, extended_data_);
          env->ReleaseByteArrayElements(data, raw_data, 0);
-      }
-
-      //TODO: move this to constructor
-      void setup(JNIEnv* jni_env, jobject wiselib_activity)
-      {
-         jni_env_ = jni_env;
-         wiselib_activity_ = wiselib_activity;
-         jclass wiselib_class_ = jni_env_->FindClass("com/ibralg/wiselib/WiselibActivity");
-         method_enable_  = jni_env_->GetMethodID(wiselib_class_, "enableBluetoothLe", "()Z");
-         method_disable_ = jni_env_->GetMethodID(wiselib_class_, "disableBluetoothLe", "()Z");
-         onBleDataReceive = delegate4<void, JNIEnv*, jobject, jbyteArray, jint>::
-            from_method<AndroidBleRadio<OsModel>, &AndroidBleRadio<OsModel>::onBleDataRecv>(this);
-	  //(Ljava/lang/String;)
       }
 
       /**
@@ -165,7 +174,7 @@ namespace wiselib
 
    private:
       // Java Native Interface
-      JNIEnv* jni_env_;  //TODO: jni_env_ must NOT be shared between different threads!!!
+      JavaVM* jvm_;
       jobject wiselib_activity_;
       jmethodID method_enable_;
       jmethodID method_disable_;

@@ -11,6 +11,8 @@ import android.bluetooth.*;
 
 public class WiselibActivity extends Activity implements BluetoothAdapter.LeScanCallback {
 
+   private static final long RESTART_SCAN_MILLIS = 1100;
+
 	public native int exampleapp(WiselibActivity wiselibActivity);
 	public native void onBleDataReceive(BluetoothDevice dev, byte[] data, int rssi);
 
@@ -18,15 +20,27 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 	private android.os.Handler handler = new android.os.Handler();
 
 	private BluetoothAdapter bluetoothAdapter;
-	private final GattCallback gattCallback = new GattCallback();  //TODO: we cant connect to iBeacons anyway, so delete this 
+   private Runnable bluetoothRestarter;
+   private boolean isBluetoothLeEnabled = false;
 
 	/**
 	 * Called when the activity is created
-         * or restarted and shall restore itself
-         */
+    * or restarted and shall restore itself
+    */
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
+		final BluetoothAdapter.LeScanCallback cb = this;
+      bluetoothRestarter = new Runnable() {
+			@Override
+			public void run() {
+				bluetoothAdapter.stopLeScan(cb);
+				bluetoothAdapter.startLeScan(cb);
+				handler.postDelayed(bluetoothRestarter, RESTART_SCAN_MILLIS);
+			}
+		};
+
 		handler.postDelayed(new Runnable() {
 			public void run() {
 				setUp();
@@ -64,6 +78,8 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 	 * @return true, if BLE is available and enabled; false otherwise
 	 */
 	public boolean enableBluetoothLe() {
+      if (isBluetoothLeEnabled) return true;
+
 		// check if BLE is present
 		if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
 			Toast.makeText(this, "Bluetooth Low Energy not supported", Toast.LENGTH_SHORT).show();
@@ -78,11 +94,13 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 			return false;
 		}
 
-		// scan for BLE devices and turn off scan after a specific timeout
+		// scan for BLE devices and restart scan after a specific timeout
 		bluetoothAdapter.startLeScan(this);
+      handler.postDelayed(bluetoothRestarter, RESTART_SCAN_MILLIS);
 
 		// code will continue in onLeScan()
 		Log.i("WiselibDebug", "Scan started");
+      isBluetoothLeEnabled = true;
 		return true;
 	}
 
@@ -91,9 +109,13 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 	 * @return true if done successfully
 	 */
 	public boolean disableBluetoothLe() {
+		if(!isBluetoothLeEnabled) return true;
+
 		if(bluetoothAdapter != null) {
+         handler.removeCallbacks(bluetoothRestarter);
 			bluetoothAdapter.stopLeScan(this);
 			Log.i("WiselibDebug", "Scan stopped");
+			isBluetoothLeEnabled = false;
 			return true;
 		} else {
 			return false;
@@ -150,10 +172,10 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 	}
 
 
+//The RSSI value for the remote device as reported by the Bluetooth hardware. 0 if no RSSI value is available.
 	@Override
 	public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
-		printBeaconInfo(device, scanRecord, rssi);
-		//bluetoothAdapter.stopLeScan(this); bluetoothAdapter.startLeScan(this);  //TODO Android semms to detect certain device only once. this resets the adapter
+		//printBeaconInfo(device, scanRecord, rssi);
 		onBleDataReceive(device, scanRecord, rssi);
 	}
 

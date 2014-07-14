@@ -56,7 +56,7 @@ public:
       radio_.reg_recv_callback<ExampleApplication, &ExampleApplication::on_receive>(this);
       radio_.enable_radio();
       radio_.send(Radio::BROADCAST_ADDRESS, sizeof(iBeaconAdvertData_t), (Radio::block_data_t*) &advertData);
-      for(;;) radio_.poll();  //needed for periodic polling of serial
+      for(;;) radio_.poll();  //needed for periodic polling of serial TODO remove this
    }
 
 private:

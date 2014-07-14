@@ -1,7 +1,9 @@
-/*
-* Wiselib example demonstrating the use of
-* Bluetooth Low Energy radio
-*/
+/**
+ * This example demonstrates the use of Bluetooth Low Energy
+ * for Android. Furthermore it shows how to use iBeacons for
+ * localization. You need an Bluetooth 4.0 capable smartphone
+ * with Android 4.3+.
+ */
 
 #include "external_interface/android/android_application.h"
 #include "external_interface/android/android_os.h"
@@ -9,11 +11,18 @@
 #include "external_interface/android/android_clock.h"
 #include "external_interface/android/android_timer.h"
 #include "external_interface/android/android_ble_radio.h"
+#include "algorithms/localization/link_metric_based/link_metric_based_localization.h"
+#include "algorithms/localization/link_metric_based/distance_estimation/ibeacon.h"
 
 typedef wiselib::AndroidOsModel Os;
+typedef Os::BleRadio BleRadio;
+typedef Os::Debug Debug;
 
-typedef Os::Radio::node_id_t node_id_t;
-typedef Os::Radio::block_data_t block_data_t;
+typedef BleRadio::node_id_t node_id_t;
+typedef BleRadio::block_data_t block_data_t;
+
+typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio> DistanceEstimation;
+typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation> Localization;
 
 class ExampleApplication
 {
@@ -21,41 +30,29 @@ public:
 
    void init(Os::AppMainParameter& amp)
    {
-      debug_ = new Os::Debug();
-      radio_ = new Os::Radio();
-      radio_->setup(amp.jni_env, amp.wiselib_activity); //TODO remove this. AndroidBleRadio should get the env from somewhere else! but where???
-      Os::Radio::block_data_t message[] = "Test\0";
-      debug_->debug( "Hello World from Example Android Application!\n" );
-      idx_ = radio_->reg_recv_callback<ExampleApplication, &ExampleApplication::on_receive>(this);
-      radio_->enable_radio();
+      debug_ = new Debug();
+      radio_ = new BleRadio(amp);
+      localization_ = new Localization();
+
+      localization_->init(radio_, debug_);
+      localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
    }
 
    ~ExampleApplication()
    {
       delete debug_;
       delete radio_;
+      delete localization_;
    }
 
 private:
-   Os::Debug* debug_;
-   Os::BleRadio* radio_;
-   int idx_;
+   Debug* debug_;
+   BleRadio* radio_;
+   Localization* localization_;
 
-   void on_receive(Os::BleRadio::node_id_t node, Os::BleRadio::size_t len, Os::BleRadio::block_data_t* data, const Os::BleRadio::ExtendedData& extended_data)
+   void state_cb(int state)
    {
-      if(len >= 30)
-      {
-         int major = data[25] << 8 | data[26];
-         int minor = data[27] << 8 | data[28];
-         int txPower = data[29];
-         if (txPower < 0) txPower = data[29] + 256;  //2s complement
-         debug_->debug(" Header: %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X", (int) data[0], (int) data[1], (int) data[2], (int) data[3], (int) data[4], (int) data[5], (int) data[6], (int) data[7], (int) data[8]);
-         debug_->debug("   UUID: %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X", (int) data[9], (int) data[10], (int) data[11], (int) data[12], (int) data[13], (int) data[14], (int) data[15], (int) data[16], (int) data[17], (int) data[17], (int) data[18], (int) data[19], (int) data[20], (int) data[21], (int) data[22], (int) data[23], (int) data[24]);
-         debug_->debug("  Major: %d, Minor: %d", major, minor); 
-         debug_->debug("TxPower: %d", txPower);
-         debug_->debug("   RSSI: %d", extended_data.link_metric() );
-      }
-      // radio_->disable_radio(); TODO
+      debug_->debug("new state %d", state);
    }
 
 };

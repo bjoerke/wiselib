@@ -76,14 +76,16 @@ namespace wiselib
       AndroidOsModel(JNIEnv* jni_env_, jobject wiselib_activity_)
       {
          jni_env = jni_env_;
-         wiselib_activity = wiselib_activity_;
+         wiselib_activity = jni_env->NewGlobalRef(wiselib_activity_);  //TODO this must be released somewhere via env->DeleteGlobalRef(w_a);
       }
+
       //-----------------------------------------------------------
       int argc;
       const char** argv;
 
-      JNIEnv* jni_env;  //the JavaNativeInterface is used to access Java code from native code
-      jobject wiselib_activity;
+      JNIEnv* jni_env;          //the JavaNativeInterface is used to access Java code from native code
+      jobject wiselib_activity; //the actvity hosting the native code
+
       // --------------------------------------------------------------------
       static const Endianness endianness = WISELIB_ENDIANNESS;
       // --------------------------------------------------------------------

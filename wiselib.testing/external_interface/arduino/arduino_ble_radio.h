@@ -116,6 +116,7 @@ namespace wiselib
        */
       int enable_radio()
       {
+         //timer_->template set_timer<ArduinoBluetoothRadio<OsModel_P> , &ArduinoBluetoothRadio<OsModel_P>::read_recv_packet > ( POLL_INTERVAL, this , ( void* )timer_ );
          return start_device() ? SUCCESS : ERR_UNSPEC;
       }
 

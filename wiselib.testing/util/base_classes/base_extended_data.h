@@ -22,22 +22,22 @@
 
 namespace wiselib {
 
-	template <typename OsModel_P>
+	template <typename OsModel_P, typename Arithmetic=uint16_t>
 	class BaseExtendedData
 	{
 	public:
 		BaseExtendedData(){}
 
-		uint16_t link_metric() const {
+		Arithmetic link_metric() const {
 			return link_metric_;
 		};
 
-		void set_link_metric( uint16_t lm ) {
+		void set_link_metric( Arithmetic lm ) {
 			link_metric_ = lm;
 		};
 
 	protected:
-		uint16_t link_metric_;
+		Arithmetic link_metric_;
 	};
 
 }
