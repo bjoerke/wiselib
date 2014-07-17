@@ -17,6 +17,7 @@
 typedef wiselib::AndroidOsModel Os;
 typedef Os::BleRadio BleRadio;
 typedef Os::Debug Debug;
+typedef Os::Timer Timer;
 
 typedef BleRadio::node_id_t node_id_t;
 typedef BleRadio::block_data_t block_data_t;
@@ -31,6 +32,7 @@ public:
    void init(Os::AppMainParameter& amp)
    {
       debug_ = new Debug();
+      timer_ = new Timer();
       radio_ = new BleRadio(amp);
       localization_ = new Localization();
 
@@ -48,6 +50,7 @@ public:
 private:
    Debug* debug_;
    BleRadio* radio_;
+   Timer* timer_;
    Localization* localization_;
 
    void state_cb(int state)

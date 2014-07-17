@@ -14,7 +14,7 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
    private static final long RESTART_SCAN_MILLIS = 1100;
 
 	public native int exampleapp(WiselibActivity wiselibActivity);
-	public native void onBleDataReceive(BluetoothDevice dev, byte[] data, int rssi);
+	public native void onBleDataReceive(long macAddr, byte[] data, int rssi);
 
 	private android.net.wifi.WifiManager.MulticastLock lock;
 	private android.os.Handler handler = new android.os.Handler();
@@ -133,6 +133,7 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 	 */
 	private void printBeaconInfo(BluetoothDevice device, byte[] scanRecord, int rssi) {
 		Log.d("WiselibDebug", "Found: " + device.getName() + " @ " + device.getAddress() );
+		Log.d("WiselibDebug", String.format("Mac=%X", macAddrFromString(device.getAddress())) );
 
 		if(scanRecord.length < 30) return;
 		
@@ -171,12 +172,23 @@ public class WiselibActivity extends Activity implements BluetoothAdapter.LeScan
 		Log.d("WiselibDebug", "Rssi: " + rssi);
 	}
 
+	/**
+	 * Converts a mac address like "00:11:22:33:44:55" to a 64 bit value like 0x001122334455
+    */
+	public long macAddrFromString(String mac) {
+		long ret = 0x00L;
+		for(int i=0; i<6; i++) {
+			long val = (Character.digit(mac.charAt(i*3), 16) << 4 | Character.digit(mac.charAt(i*3+1), 16) );
+			ret = (ret << 8) | val;
+		}
+		return ret;
+	}
 
-//The RSSI value for the remote device as reported by the Bluetooth hardware. 0 if no RSSI value is available.
+   //The RSSI value for the remote device as reported by the Bluetooth hardware. 0 if no RSSI value is available.
 	@Override
 	public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
 		//printBeaconInfo(device, scanRecord, rssi);
-		onBleDataReceive(device, scanRecord, rssi);
+		onBleDataReceive(macAddrFromString(device.getAddress()), scanRecord, rssi);
 	}
 
 /********************************************************************************************************/

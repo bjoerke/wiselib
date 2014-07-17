@@ -37,7 +37,7 @@
 //'Java_com_ibralg_wiselib_WiselibActivity_onBleDataReceive' function
 //It is set to wiselib::AndroidBleRadio::onBleDataRecv() where
 //the data is passed to all registered callbacks.
-static delegate4<void, JNIEnv*, jobject, jbyteArray, jint> onBleDataReceive;
+static delegate4<void, JNIEnv*, jlong, jbyteArray, jint> onBleDataReceive;
 
 #define MAX_RECEIVERS 16
 
@@ -61,7 +61,7 @@ namespace wiselib
    template<typename OsModel_P>
    class AndroidBleRadio : public ExtendedRadioBase<
       OsModel_P,                       //OsModel
-      jobject,                         //NodeId
+      uint64_t,                        //NodeId (6 byte mac address)
       uint8_t,                         //Size
       uint8_t,                         //Block Data
       MAX_RECEIVERS,
@@ -74,7 +74,7 @@ namespace wiselib
       typedef AndroidBleRadio<OsModel> self_type;
       typedef self_type* self_pointer_t;
 
-      typedef jobject node_id_t;    //Type of node id - must be unique for a node in the network; a pointer to a Java BluetoothDevice is used for that
+      typedef uint64_t node_id_t;    //Type of node id - must be unique for a node in the network;
       typedef uint8_t block_data_t; //Data type used for raw data in message sending process. 
       typedef uint8_t size_t;       //Unsigned integer that represents length information. 
       typedef BaseExtendedData<OsModel, int> ExtendedData; //extended data: link quality
@@ -88,7 +88,7 @@ namespace wiselib
       enum SpecialNodeIds
       {
          // BROADCAST_ADDRESS   // Broadcasting is not supported since Android supports Central Role only
-         NULL_NODE_ID           = 0  // Unknown/No node id
+         NULL_NODE_ID           = 0xFF00000000000000L  // Unknown/No node id
       };
       enum Restrictions
       {
@@ -149,17 +149,17 @@ namespace wiselib
 
          method_enable_  = jni_env->GetMethodID(wiselib_class_, "enableBluetoothLe", "()Z");
          method_disable_ = jni_env->GetMethodID(wiselib_class_, "disableBluetoothLe", "()Z");
-         onBleDataReceive = delegate4<void, JNIEnv*, jobject, jbyteArray, jint>::
+         onBleDataReceive = delegate4<void, JNIEnv*, jlong, jbyteArray, jint>::
             from_method<AndroidBleRadio<OsModel>, &AndroidBleRadio<OsModel>::onBleDataRecv>(this);
       }
 
-      void onBleDataRecv(JNIEnv* env, jobject device, jbyteArray data, jint rssi)
+      void onBleDataRecv(JNIEnv* env, jlong mac_addr, jbyteArray data, jint rssi)
       {
          jbyte* raw_data = env->GetByteArrayElements(data, NULL);
          jsize len = env->GetArrayLength(data);
          extended_data_.set_link_metric(rssi);
          ExtendedRadioBase<OsModel_P, node_id_t, size_t, block_data_t, MAX_RECEIVERS, ExtendedData>
-            ::notify_receivers((node_id_t) device, (size_t) len, (block_data_t*) raw_data, extended_data_);
+            ::notify_receivers((node_id_t) mac_addr, (size_t) len, (block_data_t*) raw_data, extended_data_);
          env->ReleaseByteArrayElements(data, raw_data, 0);
       }
 
@@ -185,9 +185,9 @@ namespace wiselib
 }
 
 extern "C" {
-   JNIEXPORT void JNICALL Java_com_ibralg_wiselib_WiselibActivity_onBleDataReceive(JNIEnv* env, jobject object, jobject dev, jbyteArray data, jint rssi)
+   JNIEXPORT void JNICALL Java_com_ibralg_wiselib_WiselibActivity_onBleDataReceive(JNIEnv* env, jobject object, jlong mac_addr, jbyteArray data, jint rssi)
    {
-      onBleDataReceive(env, dev, data, rssi);
+      onBleDataReceive(env, mac_addr, data, rssi);
    }
 }
 

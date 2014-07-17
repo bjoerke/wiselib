@@ -70,15 +70,13 @@ namespace wiselib
             uint16_t major = ( (uint16_t) iad->major_hi) << 8 | iad->major_lo;
             uint16_t minor = ( (uint16_t) iad->minor_hi) << 8 | iad->minor_lo;
             int tx_power = iad->tx_power - 256; //2s complement
-            Arithmetic_P ratio = ( (Arithmetic_P) extended_data.link_metric() ) / tx_power;
+            Arithmetic_P rssi = extended_data.link_metric();
+            if(rssi == 0) return -1;
 
-            if(major == 0xA5A6)
-            {
-               if(ratio < 1.0)  return pow(ratio, 10);
-               else             return (0.89976)*pow(ratio,7.7095) + 0.111;
-            }
-            else
-               return -1;
+            //estimate distance
+            Arithmetic_P ratio = rssi / tx_power;
+            if(ratio < 1.0)  return pow(ratio, 10);
+            else             return (0.89976)*pow(ratio,7.7095) + 0.111; 
          }
          else
          {
