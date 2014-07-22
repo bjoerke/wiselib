@@ -31,7 +31,7 @@
 //  dist = dist_new * SMOOTHING_FACTOR + dist_old * (1-SMOOTHING_FACTOR)
 #define SMOOTHING_FACTOR 0.9
 
-//#define DEBUG
+#define DEBUG
 
 namespace wiselib
 {
@@ -263,14 +263,15 @@ namespace wiselib
        */
       void on_receive(node_id_t node_id, size_t len, block_data_t* data, const ExtendedData& extended_data)
       {
-#ifdef DEBUG
-         debug_->debug("MAC=%X%0X", (uint32_t) (node_id>>32), (uint32_t) node_id );
-#endif
          Arithmetic distance = distance_estimator_.estimate_distance(node_id, len, data, extended_data);
          if(distance != -1)
          {
             update_node_info(node_id, distance);
             update_position();
+#ifdef DEBUG
+            if(sizeof(node_id_t) == 8)  debug_->debug("Found: %X%08X @ %.1f", (uint32_t) (node_id>>32), (uint32_t) (node_id), distance);
+            else                        debug_->debug("Found: %X @ %.1f", node_id, distance);
+#endif
          }
       }
 
@@ -288,9 +289,6 @@ namespace wiselib
             if(node_id != ExtendedRadio::NULL_NODE_ID)
             {
                //search for corresponding anchor (if any)
-#ifdef DEBUG
-               debug_->debug("Anchor-node: %X%X", (uint32_t) node_id, (uint32_t) (node_id >> 32) );
-#endif
                typename AnchorsMap::iterator it = anchors_.find(node_id);
                if(it != anchors_.end())
                {

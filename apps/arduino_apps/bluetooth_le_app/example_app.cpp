@@ -2,9 +2,22 @@
 #include "external_interface/arduino/arduino_os.h"
 #include "external_interface/arduino/arduino_debug.h"
 #include "external_interface/arduino/arduino_ble_radio.h"
+#include "algorithms/localization/link_metric_based/link_metric_based_localization.h"
+#include "algorithms/localization/link_metric_based/distance_estimation/static.h"
+#include "algorithms/localization/link_metric_based/distance_estimation/ibeacon.h"
+#include "algorithms/localization/link_metric_based/coordinate3d.h"
 
 typedef wiselib::ArduinoOsModel Os;
-typedef wiselib::ArduinoBleRadio<Os> Radio;
+typedef Os::BleRadio BleRadio;
+typedef Os::Debug Debug;
+
+typedef float Arithmetic;
+typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
+//typedef wiselib::StaticDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
+typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
+
+typedef BleRadio::node_id_t node_id_t;
+typedef BleRadio::block_data_t block_data_t;
 
 typedef struct iBeaconAdvertData
 {
@@ -33,9 +46,10 @@ public:
    // --------------------------------------------------------------------
    void init(Os::AppMainParameter& amp)
    {
-      Os::Debug debug_;
-      Os::Radio radio_;
-
+      Debug debug; BleRadio radio; Localization localization;
+      radio_ = &radio;
+      debug_ = &debug;
+      localization_ = &localization;
       advertData.len1 = 2;
       advertData.type1 = 0x01; //GAP_ADTYPE_FLAGS
       advertData.flags = 0x06; //GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED | GAP_ADTYPE_FLAGS_GENERAL
@@ -51,33 +65,36 @@ public:
       advertData.txPower = 0x90;
       for(int i=0; i<16; i++) advertData.uuid[i] = i;
 
-      debug_.debug("Hello World");
+      debug_->debug("Hello World");
 
-      radio_.reg_recv_callback<ExampleApplication, &ExampleApplication::on_receive>(this);
-      radio_.enable_radio();
-      radio_.send(Radio::BROADCAST_ADDRESS, sizeof(iBeaconAdvertData_t), (Radio::block_data_t*) &advertData);
-      for(;;) radio_.poll();  //needed for periodic polling of serial TODO remove this
+      radio_->enable_radio();
+      radio_->send(BleRadio::BROADCAST_ADDRESS, sizeof(iBeaconAdvertData_t), (block_data_t*) &advertData);
+
+      localization_->init(radio_, debug_);
+      localization_->add_anchor( 0x00DEE531, wiselib::coordinate3d<Arithmetic>(0.0, 0.0, 0.0) );
+      localization_->add_anchor( 0x04717875, wiselib::coordinate3d<Arithmetic>(1.3, 0.0, 0.0) );
+      localization_->add_anchor( 0x0471783B, wiselib::coordinate3d<Arithmetic>(0.0, 1.3, 0.0) );
+      localization_->add_anchor( 0xD68CD17A, wiselib::coordinate3d<Arithmetic>(1.3, 1.3, 0.1) );
+      localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
+      for(;;) radio_->poll();  //needed for periodic polling of serial TODO remove this
    }
 
 private:
 
-   void on_receive(Os::BleRadio::node_id_t node, Os::BleRadio::size_t len, Os::BleRadio::block_data_t* data, const Os::BleRadio::ExtendedData& extended_data)
+private:
+   Debug* debug_;
+   BleRadio* radio_;
+   Localization* localization_;
+
+   void state_cb(int state)
    {
-      if(len >= 30)
+      if(state == Localization::READY)
       {
-         int major = data[25] << 8 | data[26];
-         int minor = data[27] << 8 | data[28];
-         int txPower = data[29];
-         if (txPower < 0) txPower = data[29] + 256;  //2s complement
-         Serial.println("DEV!");
-/*         debug_.debug(" Header: %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X", (int) data[0], (int) data[1], (int) data[2], (int) data[3], (int) data[4], (int) data[5], (int) data[6], (int) data[7], (int) data[8]);
-         debug_.debug("   UUID: %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X", (int) data[9], (int) data[10], (int) data[11], (int) data[12], (int) data[13], (int) data[14], (int) data[15], (int) data[16], (int) data[17], (int) data[17], (int) data[18], (int) data[19], (int) data[20], (int) data[21], (int) data[22], (int) data[23], (int) data[24]);
-         debug_.debug("  Major: %d, Minor: %d", major, minor); 
-         debug_.debug("TxPower: %d", txPower);
-         debug_.debug("   RSSI: %d", extended_data.link_metric() ); */
+         wiselib::coordinate3d<Arithmetic> pos = (*localization_)();
+         debug_->debug("Pos: %d, %d, %d", (int) (pos.x*10), (int) (pos.y*10), (int) (pos.z*10));
       }
-//      radio_.disable_radio();
    }
+
 };
 // --------------------------------------------------------------------------
 wiselib::WiselibApplication<Os, ExampleApplication> example_app;

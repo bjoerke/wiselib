@@ -23,8 +23,9 @@ typedef Os::Timer Timer;
 typedef BleRadio::node_id_t node_id_t;
 typedef BleRadio::block_data_t block_data_t;
 
-typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio> DistanceEstimation;
-typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation> Localization;
+typedef double Arithmetic;
+typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
+typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
 
 class ExampleApplication
 {
@@ -38,10 +39,10 @@ public:
       localization_ = new Localization();
 
       localization_->init(radio_, debug_);
-      localization_->add_anchor(0xFF9400DEE531L, wiselib::coordinate3d<double>(0.0, 0.0, 0.0) );
-      localization_->add_anchor(0x78A504717875L, wiselib::coordinate3d<double>(1.3, 0.0, 0.0) );
-      localization_->add_anchor(0x78A50471783BL, wiselib::coordinate3d<double>(0.0, 1.3, 0.0) );
-      localization_->add_anchor(0xE6BBD68CD17AL, wiselib::coordinate3d<double>(1.3, 1.3, 0.1) );
+      localization_->add_anchor(0xFF9400DEE531L, wiselib::coordinate3d<Arithmetic>(0.0, 0.0, 0.0) );
+      localization_->add_anchor(0x78A504717875L, wiselib::coordinate3d<Arithmetic>(1.3, 0.0, 0.0) );
+      localization_->add_anchor(0x78A50471783BL, wiselib::coordinate3d<Arithmetic>(0.0, 1.3, 0.0) );
+      localization_->add_anchor(0xE6BBD68CD17AL, wiselib::coordinate3d<Arithmetic>(1.3, 1.3, 0.1) );
       localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
    }
 
@@ -59,12 +60,11 @@ private:
    Timer* timer_;
    Localization* localization_;
 
-
    void state_cb(int state)
    {
       if(state == Localization::READY)
       {
-         wiselib::coordinate3d<double> pos = (*localization_)();
+         wiselib::coordinate3d<Arithmetic> pos = (*localization_)();
          debug_->debug("Pos: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
       }
    }

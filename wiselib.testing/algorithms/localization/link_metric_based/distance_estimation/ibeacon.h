@@ -75,8 +75,9 @@ namespace wiselib
 
             //estimate distance
             Arithmetic_P ratio = rssi / tx_power;
-            if(ratio < 1.0)  return pow(ratio, 10);
-            else             return (0.89976)*pow(ratio,7.7095) + 0.111; 
+//            if(ratio < 1.0)  return pow(ratio, 10);
+//            else             return (0.89976)*pow(ratio,7.7095) + 0.111; 
+return ratio*ratio*ratio*ratio*ratio*ratio*ratio*ratio*ratio*ratio;
          }
          else
          {

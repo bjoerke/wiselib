@@ -48,6 +48,8 @@
 #define CMD_START_DEVICE             0x05
 #define CMD_STOP_DEVICE              0x06
 
+#define BT_ADDRESS_LEN 6
+
 namespace wiselib
 {
 
@@ -64,7 +66,7 @@ namespace wiselib
     *            You can just broadcast to all nodes which will send advertisement data
     */
    template<typename OsModel_P>
-   class ArduinoBleRadio : public ExtendedRadioBase<OsModel_P, uint64_t, uint8_t, uint8_t>  //OsModel, NodeId, Size, BlockData
+   class ArduinoBleRadio : public ExtendedRadioBase<OsModel_P, uint32_t, uint8_t, uint8_t>  //OsModel, NodeId, Size, BlockData
    {
    public:
       typedef OsModel_P OsModel;
@@ -72,7 +74,7 @@ namespace wiselib
       typedef ArduinoBleRadio<OsModel> self_type;
       typedef self_type* self_pointer_t;
 
-      typedef uint64_t node_id_t;    //6 byte MAC address (2 upper bytes are not used)
+      typedef uint32_t node_id_t;    //4 lowest bytes of 6 byte bt address (2 upper bytes are not used)
       typedef uint8_t block_data_t;  //Data type used for raw data in message sending process. 
       typedef uint8_t size_t;        //Unsigned integer that represents length information. 
 
@@ -87,8 +89,8 @@ namespace wiselib
 
       enum SpecialNodeIds
       {
-         NULL_NODE_ID           = 0x1000000000000000,
-         BROADCAST_ADDRESS      = 0x2000000000000000,
+         NULL_NODE_ID           = 0x00000000,
+         BROADCAST_ADDRESS      = 0xFFFFFFFF,
       };
 
       enum Restrictions
@@ -157,13 +159,21 @@ namespace wiselib
                {
                   if(read_data(&length))
                   {
+                     //read data
                      for(int i=0; i<length; i++)
                      {
                         if(! read_data(& ( ( (uint8_t*) &device_info_)[i] ) ) ) return;
                      }
+                     //convert 6byte address to 64byte value
+                     node_id_t node_id =
+                          ( (uint32_t) device_info_.address[0]) << 0 |
+                          ( (uint32_t) device_info_.address[1]) << 8 |
+                          ( (uint32_t) device_info_.address[2]) << 16 |
+                          ( (uint32_t) device_info_.address[3]) << 24;
+                     //notify receivers
                      extended_data_.set_link_metric( ((uint16_t) device_info_.rssi)+(2<<31));  //TODO Firmware passes a SIGNED int, link metric is defined as UNSINGED int
                      ExtendedRadioBase<OsModel_P, node_id_t, size_t, block_data_t>
-                        ::notify_receivers(NULL_NODE_ID, (size_t) length-7, (block_data_t*) device_info_.advData, extended_data_);
+                        ::notify_receivers(node_id, (size_t) length-7, (block_data_t*) device_info_.advData, extended_data_);
                   }
                   break;
                }
@@ -180,7 +190,7 @@ namespace wiselib
 
       struct deviceInfo
       {
-         uint8_t address[6];
+         uint8_t address[BT_ADDRESS_LEN];
          uint8_t rssi;
          uint8_t advData[31];
       }__attribute__((packed));
@@ -313,20 +323,20 @@ namespace wiselib
    };
 }
 
-#undef RX_PIN 2
-#undef TX_PIN 3
-#undef BAUD_RATE           9600
-#undef READ_TIMEOUT_MILLIS 500
-#undef ACK                 0x40
-#undef NCK                 0x23
-#undef DEVICE_FOUND        0x02
-#undef CMD_TEST                     0x01
-#undef CMD_SET_ADVERTISEMENT_DATA   0x02
-#undef CMD_SET_NAME                 0x03
-#undef CMD_GET_FIRMWARE_INFO_STRING 0x04
-#undef CMD_START_DEVICE             0x05
-#undef CMD_STOP_DEVICE              0x06
-
+#undef RX_PIN
+#undef TX_PIN
+#undef BAUD_RATE
+#undef READ_TIMEOUT_MILLIS
+#undef ACK
+#undef NCK
+#undef DEVICE_FOUND
+#undef CMD_TEST
+#undef CMD_SET_ADVERTISEMENT_DATA
+#undef CMD_SET_NAME
+#undef CMD_GET_FIRMWARE_INFO_STRING
+#undef CMD_START_DEVICE
+#undef CMD_STOP_DEVICE
+#undef BT_ADDRESS_LEN
 
 #endif
 #endif
