@@ -27,6 +27,12 @@
 #include "util/pstl/map_static_vector.h"
 #include <util/pstl/pair.h>
 
+//distance values are calculated as follows:
+//  dist = dist_new * SMOOTHING_FACTOR + dist_old * (1-SMOOTHING_FACTOR)
+#define SMOOTHING_FACTOR 0.9
+
+//#define DEBUG
+
 namespace wiselib
 {
 
@@ -149,13 +155,7 @@ namespace wiselib
 //TODO calling this twice immediately should be valid
       int init()
       {
-//TODO: move to main app:
          anchors_.clear();
-         add_anchor(0xFF9400DEE531L, coordinate3d<Arithmetic>(.0f,.0f,.0f) );
-         add_anchor(0x78A504717875L, coordinate3d<Arithmetic>(1.3f,.0f,.0f) );
-         add_anchor(0x78A50471783BL, coordinate3d<Arithmetic>(.0f,1.3f,.0f) );
-         add_anchor(0xE6BBD68CD17AL, coordinate3d<Arithmetic>(1.3f,1.3f,0.1f) );
-
          delete_node_infos();
          idx_ = radio_->template reg_recv_callback<self_type, &self_type::on_receive>(this);
          radio_->enable_radio();
@@ -178,7 +178,7 @@ namespace wiselib
        */
       value_t operator() () 
       {
-         ;
+         return position_;
       }
 
       /**
@@ -236,6 +236,8 @@ namespace wiselib
       int state_;
       DistanceEstimator distance_estimator_;
 
+      value_t position_;
+
       node_info_t neighbors_[MAX_ANCHORS];
       int num_neighbors_;
       AnchorsMap anchors_;
@@ -261,7 +263,9 @@ namespace wiselib
        */
       void on_receive(node_id_t node_id, size_t len, block_data_t* data, const ExtendedData& extended_data)
       {
+#ifdef DEBUG
          debug_->debug("MAC=%X%0X", (uint32_t) (node_id>>32), (uint32_t) node_id );
+#endif
          Arithmetic distance = distance_estimator_.estimate_distance(node_id, len, data, extended_data);
          if(distance != -1)
          {
@@ -284,7 +288,9 @@ namespace wiselib
             if(node_id != ExtendedRadio::NULL_NODE_ID)
             {
                //search for corresponding anchor (if any)
+#ifdef DEBUG
                debug_->debug("Anchor-node: %X%X", (uint32_t) node_id, (uint32_t) (node_id >> 32) );
+#endif
                typename AnchorsMap::iterator it = anchors_.find(node_id);
                if(it != anchors_.end())
                {
@@ -296,10 +302,11 @@ namespace wiselib
                //if enough anchors (i.e. 4) then start trilatertion
                if(num_anchors == 4)
                {
+#ifdef DEBUG
                   for(int j=0; j<4; j++) debug_->debug("Anchor %d at %.1f, %.1f, %.1f is %.1f meters away",j, anchor_positions[j]->x, anchor_positions[j]->y, anchor_positions[j]->z, anchor_distances[j]);
-                  coordinate3d<Arithmetic> position;
-                  trilateration3d<Arithmetic>(anchor_positions, anchor_distances, &position);
-                  debug_->debug("Pos: %.1f, %.1f, %.1f", position.x, position.y, position.z);
+#endif
+                  trilateration3d<Arithmetic>(anchor_positions, anchor_distances, &position_);
+                  set_state(READY);
                   return;
                }
             }
@@ -333,7 +340,7 @@ namespace wiselib
          {
             if(neighbors_[i].node_id == node_id)
             {
-               neighbors_[i].distance = distance; //TODO: exponential weighting
+               neighbors_[i].distance = distance * SMOOTHING_FACTOR +  neighbors_[i].distance * (1-SMOOTHING_FACTOR);
                return;
             }
             if(first_free == NULL && neighbors_[i].node_id == ExtendedRadio::NULL_NODE_ID)
@@ -353,4 +360,10 @@ namespace wiselib
 
    };
 }// namespace wiselib
+
+#undef SMOOTHING_FACTOR
+#ifdef DEBUG
+#undef DEBUG
+#endif
+
 #endif

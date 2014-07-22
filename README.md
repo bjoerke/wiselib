@@ -5,17 +5,21 @@ This repository has been forked from:
 
 As a result almost every source has been copied from there, expect the following:
  * the Android port has been merged into it: https://github.com/rraf/wiselib (branch: android) so that these files have been copied from there:
-     wiselib.testing/external_interface/android/*
-     wiselib.testing/algorithms/neighbor_discovery/echo_jmdns.h
-     apps/generic_apps/Makefile.android
-     apps/android_apps/example_app
+	wiselib.testing/external_interface/android/*
+	wiselib.testing/algorithms/neighbor_discovery/echo_jmdns.h
+	apps/generic_apps/Makefile.android
+	apps/android_apps/example_app
 
- * new file have been added to implement iBeacon support:
-     wiselib.testing/external_interface/android/android_ble_radio.h
-     apps/android_apps/bluetooth_le_app/*
-     [wiselib.testing/external_interface/arduino/_arduino_ibeacon_radio.h (deprecated)]
-     wiselib.testing/external_interface/arduino/arduino_ble_radio.h
-     apps/arduino_apps/bluetooth_le_app/*
+ * new files have been added:
+	- BLE for Android:
+		wiselib.testing/external_interface/android/android_ble_radio.h
+		apps/android_apps/bluetooth_le_app/*
+	- BLE for Arduino:
+		[wiselib.testing/external_interface/arduino/_arduino_ibeacon_radio.h (deprecated)]
+		wiselib.testing/external_interface/arduino/arduino_ble_radio.h
+		apps/arduino_apps/bluetooth_le_app/*
+	- iBeacon based localization:
+		wiselib.testing/algorithms/localization/link_metric_based/*
 
 For more information, see
 	http://www.wiselib.org/

@@ -13,6 +13,7 @@
 #include "external_interface/android/android_ble_radio.h"
 #include "algorithms/localization/link_metric_based/link_metric_based_localization.h"
 #include "algorithms/localization/link_metric_based/distance_estimation/ibeacon.h"
+#include "algorithms/localization/link_metric_based/coordinate3d.h"
 
 typedef wiselib::AndroidOsModel Os;
 typedef Os::BleRadio BleRadio;
@@ -37,6 +38,10 @@ public:
       localization_ = new Localization();
 
       localization_->init(radio_, debug_);
+      localization_->add_anchor(0xFF9400DEE531L, wiselib::coordinate3d<double>(0.0, 0.0, 0.0) );
+      localization_->add_anchor(0x78A504717875L, wiselib::coordinate3d<double>(1.3, 0.0, 0.0) );
+      localization_->add_anchor(0x78A50471783BL, wiselib::coordinate3d<double>(0.0, 1.3, 0.0) );
+      localization_->add_anchor(0xE6BBD68CD17AL, wiselib::coordinate3d<double>(1.3, 1.3, 0.1) );
       localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
    }
 
@@ -44,6 +49,7 @@ public:
    {
       delete debug_;
       delete radio_;
+      delete timer_;
       delete localization_;
    }
 
@@ -53,9 +59,14 @@ private:
    Timer* timer_;
    Localization* localization_;
 
+
    void state_cb(int state)
    {
-      debug_->debug("new state %d", state);
+      if(state == Localization::READY)
+      {
+         wiselib::coordinate3d<double> pos = (*localization_)();
+         debug_->debug("Pos: %.1f, %.1f, %.1f", pos.x, pos.y, pos.z);
+      }
    }
 
 };
