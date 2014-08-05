@@ -19,6 +19,7 @@ typedef wiselib::AndroidOsModel Os;
 typedef Os::BleRadio BleRadio;
 typedef Os::Debug Debug;
 typedef Os::Timer Timer;
+typedef Os::Clock Clock;
 
 typedef BleRadio::node_id_t node_id_t;
 typedef BleRadio::block_data_t block_data_t;
@@ -35,13 +36,14 @@ public:
    {
       debug_ = new Debug();
       timer_ = new Timer();
+      Clock* clock_ = new Clock();
       radio_ = new BleRadio(amp);
       localization_ = new Localization();
 
-      localization_->init(radio_, debug_);
+      localization_->init(radio_, debug_, clock_);
       localization_->add_anchor(0xFF9400DEE531L, wiselib::coordinate3d<Arithmetic>(0.0, 0.0, 0.0) );
-      localization_->add_anchor(0x78A504717875L, wiselib::coordinate3d<Arithmetic>(1.3, 0.0, 0.0) );
-      localization_->add_anchor(0x78A50471783BL, wiselib::coordinate3d<Arithmetic>(0.0, 1.3, 0.0) );
+      localization_->add_anchor(0xFC2A3BABA5A6L, wiselib::coordinate3d<Arithmetic>(1.3, 0.0, 0.0) );
+      localization_->add_anchor(0x0017EA92D1C5L, wiselib::coordinate3d<Arithmetic>(0.0, 1.3, 0.0) );
       localization_->add_anchor(0xE6BBD68CD17AL, wiselib::coordinate3d<Arithmetic>(1.3, 1.3, 0.1) );
       localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
    }

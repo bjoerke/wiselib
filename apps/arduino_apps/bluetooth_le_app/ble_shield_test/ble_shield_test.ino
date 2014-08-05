@@ -157,6 +157,8 @@ void loop()
             ( (uint8_t*) &devInfo)[i] = ble.read();
           }
           Serial.print(bdAddr2Str(devInfo.address));
+          int rssi = -devInfo.rssi;
+          Serial.print(" "); Serial.print(rssi, DEC); Serial.print(" ");
           if(isIBeaconAdvData(devInfo.advData)) Serial.println(" [IB]");
           else                                 Serial.println();
           break;

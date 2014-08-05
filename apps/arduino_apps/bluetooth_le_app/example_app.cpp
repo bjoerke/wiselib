@@ -7,38 +7,40 @@
 #include "algorithms/localization/link_metric_based/distance_estimation/ibeacon.h"
 #include "algorithms/localization/link_metric_based/coordinate3d.h"
 
+#include <avr/sleep.h>
+#include <avr/wdt.h>
+
 typedef wiselib::ArduinoOsModel Os;
 typedef Os::BleRadio BleRadio;
 typedef Os::Debug Debug;
+typedef Os::Clock Clock;
 
 typedef float Arithmetic;
 typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
-//typedef wiselib::StaticDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
-typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
+//only returns a constant distance
+  //typedef wiselib::StaticDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
+//distance estimation based on iBeacon data and RSSI
+  typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
 
 typedef BleRadio::node_id_t node_id_t;
 typedef BleRadio::block_data_t block_data_t;
 
-typedef struct iBeaconAdvertData
-{
-  uint8_t len1;
-  uint8_t type1;
-  uint8_t flags;
-  
-  uint8_t len2;
-  uint8_t type2;
-  uint8_t manufacturerID_lo;
-  uint8_t manufacturerID_hi;
-  uint16_t advertisement;
-  uint8_t uuid[16];
-  uint8_t major_hi;
-  uint8_t major_lo;
-  uint8_t minor_hi;
-  uint8_t minor_lo;
-  uint8_t txPower;
-}__attribute__((packed)) iBeaconAdvertData_t;
-
-iBeaconAdvertData_t advertData;
+uint8_t advertData[30] = {
+  2,    //Length1
+  0x01, //ADTYPE_FLAGS
+  0x06, //FLAGS_BREDR_NOT_SUPPORTED | FLAGS_GENERAL
+  26,   //Length2
+  0xFF, //ADTYPE_MANUFACTURER_SPECIFIC
+  0x4C, 0x00,   //Manufacturer ID (Apple)
+  0x02, 0x15,   //0x0215 (Advertisement)
+  0x11, 0x22, 0x33, 0x44,  //UUID
+  0x55, 0x66, 0x77, 0x88,  // "
+  0x99, 0xAA, 0xBB, 0xCC,  // "
+  0xDD, 0xEE, 0xFF, 0x00,  // "
+  0xAA, 0xAA,   //Major number
+  0xBB, 0xBB,   //Minor number
+  -70  //txPower
+};
 
 class ExampleApplication
 {
@@ -46,46 +48,29 @@ public:
    // --------------------------------------------------------------------
    void init(Os::AppMainParameter& amp)
    {
-      Debug debug; BleRadio radio; Localization localization;
-      radio_ = &radio;
+      Debug debug; BleRadio radio; Clock clock; Localization localization;
       debug_ = &debug;
+      radio_ = &radio;
       localization_ = &localization;
-      advertData.len1 = 2;
-      advertData.type1 = 0x01; //GAP_ADTYPE_FLAGS
-      advertData.flags = 0x06; //GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED | GAP_ADTYPE_FLAGS_GENERAL
-      advertData.len2 = 26;
-      advertData.type2 = 0xFF; //GAP_ADTYPE_MANUFACTURER_SPECIFIC,
-      advertData.manufacturerID_lo = 0x4C; //Apple
-      advertData.manufacturerID_hi = 0x00;
-      advertData.advertisement = 0x1502;
-      advertData.major_lo = 0xBB;
-      advertData.major_hi = 0xBB;
-      advertData.minor_lo = 0xAA;
-      advertData.minor_hi = 0xAA;
-      advertData.txPower = 0x90;
-      for(int i=0; i<16; i++) advertData.uuid[i] = i;
-
       debug_->debug("Hello World");
 
       radio_->enable_radio();
-      radio_->send(BleRadio::BROADCAST_ADDRESS, sizeof(iBeaconAdvertData_t), (block_data_t*) &advertData);
+      radio_->send(BleRadio::BROADCAST_ADDRESS, sizeof(advertData), advertData);
 
-      localization_->init(radio_, debug_);
-      localization_->add_anchor( 0x00DEE531, wiselib::coordinate3d<Arithmetic>(0.0, 0.0, 0.0) );
-      localization_->add_anchor( 0x04717875, wiselib::coordinate3d<Arithmetic>(1.3, 0.0, 0.0) );
-      localization_->add_anchor( 0x0471783B, wiselib::coordinate3d<Arithmetic>(0.0, 1.3, 0.0) );
-      localization_->add_anchor( 0xD68CD17A, wiselib::coordinate3d<Arithmetic>(1.3, 1.3, 0.1) );
+      localization_->init(radio_, debug_, &clock);
+      localization_->add_anchor( 0x00DEE531, wiselib::coordinate3d<Arithmetic>(  0.0,   0.0,  0.0) );
+      localization_->add_anchor( 0x04717875, wiselib::coordinate3d<Arithmetic>(130.0,   0.0,  0.0) );
+      localization_->add_anchor( 0x0471783B, wiselib::coordinate3d<Arithmetic>(  0.0, 130.0,  0.0) );
+      localization_->add_anchor( 0xD68CD17A, wiselib::coordinate3d<Arithmetic>(130.0, 130.0, 10.0) );
       localization_->register_state_callback<ExampleApplication, &ExampleApplication::state_cb>(this);
-      for(;;) radio_->poll();  //needed for periodic polling of serial TODO remove this
+      for(;;) radio_->poll_serial(NULL);  //TODO: this should be replaced by an periodic timer!
    }
 
-private:
-
-private:
    Debug* debug_;
    BleRadio* radio_;
    Localization* localization_;
 
+private:
    void state_cb(int state)
    {
       if(state == Localization::READY)
@@ -105,9 +90,21 @@ int main(int argc, const char** argv)
 #if defined(USBCON)
    USBDevice.attach();
 #endif
-   Serial.begin(9600);  //TODO: this should go into Debug shouldn't it?
+   ::Serial.begin(9600);
    wiselib::ArduinoOsModel amp;
    example_app.init(amp);
-   return 0;
+   for(;;)
+   {
+       if(serialEventRun) serialEventRun();
+       if(wiselib::ArduinoTask::tasks_.empty())
+          ;
+       else
+       {
+          wiselib::ArduinoTask t = wiselib::ArduinoTask::tasks_.front();
+          wiselib::ArduinoTask::tasks_.pop();
+          t.callback_(t.userdata_);
+          delay(10);
+      }
+   }
 }
 

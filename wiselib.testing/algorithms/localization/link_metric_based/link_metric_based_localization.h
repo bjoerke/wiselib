@@ -31,6 +31,9 @@
 //  dist = dist_new * SMOOTHING_FACTOR + dist_old * (1-SMOOTHING_FACTOR)
 #define SMOOTHING_FACTOR 0.9
 
+//a node is deleted if no data has been received since TIME_TO_LIVE seconds
+#define TIME_TO_LIVE   10
+
 #define DEBUG
 
 namespace wiselib
@@ -71,7 +74,7 @@ namespace wiselib
             typename Arithmatic_P = double,
             int MAX_CALLBACKS = 10,
             int MAX_ANCHORS = 10,
-            typename Timer_P = typename OsModel_P::Timer,
+            typename Clock_P = typename OsModel_P::Clock,
             typename Debug_P = typename OsModel_P::Debug>
    class LinkMetricBasedLocalization
    {
@@ -83,14 +86,17 @@ namespace wiselib
       typedef Debug_P Debug;
       typedef Arithmatic_P Arithmetic;
       typedef DistanceEstimator_P DistanceEstimator;
-      typedef Timer_P Timer;
+      typedef Clock_P Clock; 
 
-      typedef LinkMetricBasedLocalization<OsModel, ExtendedRadio, DistanceEstimator, Arithmetic, MAX_CALLBACKS, MAX_ANCHORS, Timer, Debug> self_type;
+      typedef LinkMetricBasedLocalization<OsModel, ExtendedRadio, DistanceEstimator, Arithmetic, MAX_CALLBACKS, MAX_ANCHORS, Clock, Debug> self_type;
 
       typedef typename ExtendedRadio::size_t size_t;
       typedef typename ExtendedRadio::node_id_t node_id_t;
       typedef typename ExtendedRadio::block_data_t block_data_t;
       typedef typename ExtendedRadio::ExtendedData ExtendedData;
+
+      typedef typename Clock::time_t    time_t;
+      typedef typename Clock::seconds_t seconds_t;
 
       //callback registration
       typedef delegate1<void, int> state_delegate_t;
@@ -100,9 +106,9 @@ namespace wiselib
       //stores information about neighbor nodes
       typedef struct node_info
       {
-         node_id_t       node_id;
-         Arithmetic      distance;
-         typename Timer::millis_t time_to_live;
+         node_id_t  node_id;
+         Arithmetic distance;
+         seconds_t  last_update_time;
       }node_info_t;
       
       //stores information about anchors
@@ -141,10 +147,11 @@ namespace wiselib
       /**
        * Initializes the algorithm
        */
-      int init(ExtendedRadio* radio, Debug* debug)
+      int init(ExtendedRadio* radio, Debug* debug, Clock* clock)
       {
          radio_ = radio;
          debug_ = debug;
+         clock_ = clock;
          init();
       }
 
@@ -232,6 +239,8 @@ namespace wiselib
       CallbackVector callbacks_;
       ExtendedRadio* radio_;
       Debug* debug_;
+      Clock* clock_;
+
       int idx_;
       int state_;
       DistanceEstimator distance_estimator_;
@@ -266,11 +275,15 @@ namespace wiselib
          Arithmetic distance = distance_estimator_.estimate_distance(node_id, len, data, extended_data);
          if(distance != -1)
          {
-            update_node_info(node_id, distance);
+            update_node_infos(node_id, distance);
             update_position();
 #ifdef DEBUG
-            if(sizeof(node_id_t) == 8)  debug_->debug("Found: %X%08X @ %.1f", (uint32_t) (node_id>>32), (uint32_t) (node_id), distance);
-            else                        debug_->debug("Found: %X @ %.1f", node_id, distance);
+//if(node_id == 0xFC2A3BABA5A6L)
+//{
+            int rssi = extended_data.link_metric();
+            if(sizeof(int)==4)      debug_->debug("Found: %08X%08X @ %.1f (%d)", (uint32_t) (node_id>>32), (uint32_t) (node_id), distance, rssi);  //For Android
+            else if(sizeof(int)==2) debug_->debug("Found: %04X%04X%04X%04X @ %d (%d)", (uint16_t) (node_id>>48), (uint16_t) (node_id>>32), (uint16_t) (node_id>>16), (uint16_t) (node_id>>0), (int) (distance*100), rssi); //For Arduino
+//}
 #endif
          }
       }
@@ -278,6 +291,7 @@ namespace wiselib
       /**
        * Updaates this node's position after a change of node info data
        */
+      //TODO: search for 4 nearest neighbors only!
       void update_position()
       {
          coordinate3d<Arithmetic>* anchor_positions[4];
@@ -327,32 +341,57 @@ namespace wiselib
       }
 
       /**
-       * Updates node info or adds a new one if it does not exist
+       * Updates node info or adds a new one if it does not exist.
+       * Also deletes old nodes.
        * \param node_id id of node to update info for
        * \param distance new estimated distance of this node
        */
-      void update_node_info(node_id_t node_id, Arithmetic distance)
+      void update_node_infos(node_id_t node_id, Arithmetic distance)
       {
-         node_info_t* first_free = NULL;
+         node_info_t* info = NULL;
+         seconds_t cur_time = clock_->seconds(clock_->time());
+
          for(int i=0; i<MAX_ANCHORS; i++)
          {
-            if(neighbors_[i].node_id == node_id)
+            //empty entry?
+            if(neighbors_[i].node_id == ExtendedRadio::NULL_NODE_ID)
             {
-               neighbors_[i].distance = distance * SMOOTHING_FACTOR +  neighbors_[i].distance * (1-SMOOTHING_FACTOR);
-               return;
+               if(info == NULL)
+               {
+                  neighbors_[i].node_id = node_id;
+                  num_neighbors_++;
+                  info = &neighbors_[i];
+               }
             }
-            if(first_free == NULL && neighbors_[i].node_id == ExtendedRadio::NULL_NODE_ID)
+            else  //entry is not empty
             {
-               first_free = &neighbors_[i];
+               if(neighbors_[i].node_id == node_id)
+               {
+                  info = &neighbors_[i];
+               }
+               else
+               {
+                  //check if entry is too old -> node is out of reach
+                  if(cur_time - neighbors_[i].last_update_time > TIME_TO_LIVE)
+                  {
+                     //delete entry
+#ifdef DEBUG
+                     node_id_t node_id = neighbors_[i].node_id;
+                     if(sizeof(int)==4)      debug_->debug("Deleted: %08X%08X", (uint32_t) (node_id>>32), (uint32_t) (node_id));  //For Android
+                     else if(sizeof(int)==2) debug_->debug("Deleted: %04X%04X%04X%04X", (uint16_t) (node_id>>48), (uint16_t) (node_id>>32), (uint16_t) (node_id>>16), (uint16_t) (node_id>>0)); //For Arduino
+#endif
+                    neighbors_[i].node_id = ExtendedRadio::NULL_NODE_ID;
+                    num_neighbors_--;
+                 }
+              }
             }
          }
-         if(first_free != NULL)
+         if(info != NULL)
          {
-            first_free->node_id  = node_id;
-            first_free->distance = distance;
-            num_neighbors_++;
+            info->distance = distance * SMOOTHING_FACTOR +  info->distance * (1-SMOOTHING_FACTOR);
+            info->last_update_time = cur_time;
          }
-//TODO: else
+//TODO: else = the list is full :(
       }
 
 
@@ -363,5 +402,6 @@ namespace wiselib
 #ifdef DEBUG
 #undef DEBUG
 #endif
+#undef TIME_TO_LIVE
 
 #endif

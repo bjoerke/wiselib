@@ -17,8 +17,8 @@
  ** If not, see <http://www.gnu.org/licenses/>.                           **
  ***************************************************************************/
 
-#ifndef __DISTANCE_ESTIMATION_IBEACON__
-#define __DISTANCE_ESTIMATION_IBEACON__
+#ifndef __DISTANCE_ESTIMATION_STATIC__
+#define __DISTANCE_ESTIMATION_STATIC__
 
 #include <math.h>
 
@@ -26,14 +26,12 @@ namespace wiselib
 {
 
    /** 
-    * \brief 
-    * \tparam
-    * \ingroup
+    * \brief Only for testing - always returns a one meter distance
     */
    template<typename OsModel_P,
             typename ExtendedRadio_P,
-            typename Arithmetic_P = double>
-   class IBeaconDistanceEstimation
+            typename Arithmetic_P>
+   class StaticDistanceEstimation
    {
 
    public:
@@ -42,17 +40,6 @@ namespace wiselib
       typedef typename ExtendedRadio_P::node_id_t node_id_t;
       typedef typename ExtendedRadio_P::block_data_t block_data_t;
       typedef typename ExtendedRadio_P::ExtendedData ExtendedData;
-
-      typedef struct ibeacon_advertising_data
-      {
-         uint8_t header[9];
-         uint8_t uuid[16];
-         uint8_t major_hi;
-         uint8_t major_lo;
-         uint8_t minor_hi;
-         uint8_t minor_lo;
-         uint8_t tx_power;
-      }__attribute__((packed)) ibeacon_advertising_data_t;
 
       /**
        * \brief calculates distance to node based on received data
@@ -64,30 +51,7 @@ namespace wiselib
        */
       Arithmetic_P estimate_distance(node_id_t node, size_t len, block_data_t* data, const ExtendedData& extended_data)
       {
-         if(is_ibeacon_adv_data(len, data))
-         {
-            ibeacon_advertising_data_t* iad = (ibeacon_advertising_data_t*) data;
-            uint16_t major = ( (uint16_t) iad->major_hi) << 8 | iad->major_lo;
-            uint16_t minor = ( (uint16_t) iad->minor_hi) << 8 | iad->minor_lo;
-            int tx_power = iad->tx_power-256;
-            int rssi = extended_data.link_metric();
-            if(rssi == 0) return -1;
-            //estimate distance
-            return exp(0.115 * ( (Arithmetic_P) (tx_power - rssi)));
-         }
-         else
-         {
-            return -1;
-         }
-      }
-
-   private:
-
-      bool is_ibeacon_adv_data(size_t len, uint8_t* data)
-      {
-          if(len < sizeof(ibeacon_advertising_data_t)) return false;
-          return(data[0]==0x02 && data[1]==0x01 && data[2]==0x06 && data[3]==0x1A && data[4]==0xFF &&
-                 data[5]==0x4C && data[6]==0x00 && data[7]==0x02 && data[8]==0x15);
+         return pow(10.1,0.2);
       }
 
    };

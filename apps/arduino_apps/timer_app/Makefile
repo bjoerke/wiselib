@@ -1,9 +1,9 @@
-WISELIB_PATH=/home/parita/gsoc/wiselib
+WISELIB_PATH=/home/wiselib/wiselib
 
 WISELIB_STABLE=$(WISELIB_PATH)/wiselib.stable
 WISELIB_TESTING=$(WISELIB_PATH)/wiselib.testing
 
-ARDUINO_PATH=/home/parita/gsoc/Arduino
+ARDUINO_PATH=/home/wiselib/Arduino
 VARIANTS=standard
 
 SPI_PATH=$(ARDUINO_PATH)/libraries/SPI
@@ -16,7 +16,7 @@ SOFTWARE_SERIAL_PATH=$(ARDUINO_PATH)/libraries/SoftwareSerial
 ARDUINO_HEADERS=-I$(SPI_PATH) -I$(PINS_PATH) -I$(WIRING_PATH) -I$(ETHERNET_PATH) \
 	-I$(ETHERNET_PATH)/utility -I$(SD_PATH) -I$(SOFTWARE_SERIAL_PATH) -I$(SD_PATH)/utility
 
-ZEROCONF_PATH=/home/parita/EthernetBonjour
+ZEROCONF_PATH=/home/wiselib/Arduino/libraries/EthernetBonjour
 
 CXX=avr-g++
 INCLUDE=$(ARDUINO_HEADERS) -I$(ZEROCONF_PATH) -I$(WISELIB_STABLE) -I$(WISELIB_TESTING)

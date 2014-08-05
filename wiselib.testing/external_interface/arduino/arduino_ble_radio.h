@@ -36,6 +36,7 @@
 
 #define BAUD_RATE           9600
 #define READ_TIMEOUT_MILLIS 500
+#define POLL_INTERVAL       30
 
 #define ACK                 0x40
 #define NCK                 0x23
@@ -66,7 +67,7 @@ namespace wiselib
     *            You can just broadcast to all nodes which will send advertisement data
     */
    template<typename OsModel_P>
-   class ArduinoBleRadio : public ExtendedRadioBase<OsModel_P, uint32_t, uint8_t, uint8_t>  //OsModel, NodeId, Size, BlockData
+   class ArduinoBleRadio : public ExtendedRadioBase<OsModel_P, uint64_t, uint8_t, uint8_t>  //OsModel, NodeId, Size, BlockData
    {
    public:
       typedef OsModel_P OsModel;
@@ -74,7 +75,7 @@ namespace wiselib
       typedef ArduinoBleRadio<OsModel> self_type;
       typedef self_type* self_pointer_t;
 
-      typedef uint32_t node_id_t;    //4 lowest bytes of 6 byte bt address (2 upper bytes are not used)
+      typedef uint64_t node_id_t;    //6 byte bluetooth address
       typedef uint8_t block_data_t;  //Data type used for raw data in message sending process. 
       typedef uint8_t size_t;        //Unsigned integer that represents length information. 
 
@@ -118,8 +119,13 @@ namespace wiselib
        */
       int enable_radio()
       {
-         //timer_->template set_timer<ArduinoBluetoothRadio<OsModel_P> , &ArduinoBluetoothRadio<OsModel_P>::read_recv_packet > ( POLL_INTERVAL, this , ( void* )timer_ );
-         return start_device() ? SUCCESS : ERR_UNSPEC;
+         if(start_device())
+         {
+            poll_serial(NULL);
+            return SUCCESS;
+         } else {
+            return ERR_UNSPEC;
+         }
       }
 
       /**
@@ -147,7 +153,7 @@ namespace wiselib
        * Must be called frequently; Waits for incomming 'Device Found' responses
        * on serial line.
        */
-      void poll()
+      void poll_serial(void*)
       {
          uint8_t opcode, length;
          if(shield_.available() > 0)
@@ -165,13 +171,14 @@ namespace wiselib
                         if(! read_data(& ( ( (uint8_t*) &device_info_)[i] ) ) ) return;
                      }
                      //convert 6byte address to 64byte value
-                     node_id_t node_id =
-                          ( (uint32_t) device_info_.address[0]) << 0 |
-                          ( (uint32_t) device_info_.address[1]) << 8 |
-                          ( (uint32_t) device_info_.address[2]) << 16 |
-                          ( (uint32_t) device_info_.address[3]) << 24;
+                     node_id_t node_id = 0L;
+                     for(int i=0; i<BT_ADDRESS_LEN; i++)
+                     {
+                          node_id = (node_id << 8) | (uint64_t) device_info_.address[BT_ADDRESS_LEN-i-1];
+                     }
                      //notify receivers
-                     extended_data_.set_link_metric( ((uint16_t) device_info_.rssi)+(2<<31));  //TODO Firmware passes a SIGNED int, link metric is defined as UNSINGED int
+                     int rssi = -device_info_.rssi;
+                     extended_data_.set_link_metric(rssi);
                      ExtendedRadioBase<OsModel_P, node_id_t, size_t, block_data_t>
                         ::notify_receivers(node_id, (size_t) length-7, (block_data_t*) device_info_.advData, extended_data_);
                   }
@@ -181,12 +188,16 @@ namespace wiselib
                   break; //unknown opcode
             }
          }
+         //reload timer
+//TODO: Arduino's timer seems to conflict with SoftwareSerial, so that this function has to be called manually
+//      timer_->template set_timer<ArduinoBleRadio<OsModel_P> , &ArduinoBleRadio<OsModel_P>::poll_serial > (POLL_INTERVAL, this , (void*) timer_);
       }
                 
                
 
    private:
       SoftwareSerial shield_;
+      typename OsModel::Timer* timer_;
 
       struct deviceInfo
       {
