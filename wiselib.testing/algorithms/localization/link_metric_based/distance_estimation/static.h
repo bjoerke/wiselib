@@ -20,8 +20,6 @@
 #ifndef __DISTANCE_ESTIMATION_STATIC__
 #define __DISTANCE_ESTIMATION_STATIC__
 
-#include <math.h>
-
 namespace wiselib
 {
 
@@ -51,7 +49,7 @@ namespace wiselib
        */
       Arithmetic_P estimate_distance(node_id_t node, size_t len, block_data_t* data, const ExtendedData& extended_data)
       {
-         return pow(10.1,0.2);
+         return 1;
       }
 
    };

@@ -51,7 +51,7 @@ namespace wiselib
     *            block_data_t* data, const ExtendedData& extended_data);
     *    This method is called by this class on data reception to build a map of
     *    anchornode-distance pairs.
-    *  - if at least 3 node-distance pairs are available trilateration is used to
+    *  - if at least 4 node-distance pairs are available trilateration is used to
     *    calculate the node's position.
     *  - the position is updated frequently so that this algorithm is suitable for
     *    a moving node.
@@ -62,7 +62,7 @@ namespace wiselib
     * \tparam DistanceEstimator_P Module which estimates the distance between node and anchor-node
     * \tparam Arithmetic_P        Data type to use for calculations; determines precision
     * \tparam MAX_CALLBACKS       Maximum number of callbacks
-    * \tparam MAX_ANCHORS         Maximum number of anchors this device can detect at the same time
+    * \tparam MAX_ANCHORS         Maximum number of anchors used
     * \tparam Debug_p             Debug output
     *
     * \ingroup basic_algorithm
@@ -152,21 +152,22 @@ namespace wiselib
          radio_ = radio;
          debug_ = debug;
          clock_ = clock;
-         init();
+         idx_ = -1;
+         return init();
       }
 
       /**
        * Reset algorithm.
        * Known position (if so) is lost, state is set back to NO_VALUE. 
        */
-//TODO calling this twice immediately should be valid
       int init()
       {
          anchors_.clear();
          delete_node_infos();
-         idx_ = radio_->template reg_recv_callback<self_type, &self_type::on_receive>(this);
+         if(idx_ == -1)  idx_ = radio_->template reg_recv_callback<self_type, &self_type::on_receive>(this);
          radio_->enable_radio();
          set_state(NO_VALUE);
+         return SUCCESS;
       }
 
 
@@ -177,7 +178,10 @@ namespace wiselib
       int destruct( void )
       {
          radio_->disable_radio();
+         radio_->unreg_recv_callback(idx_); 
+         idx_=-1;
          set_state(INACTIVE);
+         return SUCCESS;
       }
 
       /**
@@ -227,10 +231,18 @@ namespace wiselib
          return SUCCESS;
       }
 
+      /**
+       * Adds a new anchor node which will be used for localization
+       * \param node_id id of anchor
+       * \param position the 3d position of this node
+       */
       void add_anchor(node_id_t node_id, coordinate3d<Arithmetic> position)
       {
          pair<node_id_t, coordinate3d<Arithmetic> > p(node_id, position);
-         anchors_.insert(p); //TODO: what happens if anchor already exists?
+         if(!anchors_.contains(node_id))
+         {
+            anchors_.insert(p);
+         }
       }
 
 
@@ -278,12 +290,9 @@ namespace wiselib
             update_node_infos(node_id, distance);
             update_position();
 #ifdef DEBUG
-//if(node_id == 0xFC2A3BABA5A6L)
-//{
             int rssi = extended_data.link_metric();
             if(sizeof(int)==4)      debug_->debug("Found: %08X%08X @ %.1f (%d)", (uint32_t) (node_id>>32), (uint32_t) (node_id), distance, rssi);  //For Android
             else if(sizeof(int)==2) debug_->debug("Found: %04X%04X%04X%04X @ %d (%d)", (uint16_t) (node_id>>48), (uint16_t) (node_id>>32), (uint16_t) (node_id>>16), (uint16_t) (node_id>>0), (int) (distance*100), rssi); //For Arduino
-//}
 #endif
          }
       }
@@ -348,7 +357,8 @@ namespace wiselib
        */
       void update_node_infos(node_id_t node_id, Arithmetic distance)
       {
-         node_info_t* info = NULL;
+         node_info_t* free_info = NULL;
+         bool node_id_found = false;
          seconds_t cur_time = clock_->seconds(clock_->time());
 
          for(int i=0; i<MAX_ANCHORS; i++)
@@ -356,18 +366,18 @@ namespace wiselib
             //empty entry?
             if(neighbors_[i].node_id == ExtendedRadio::NULL_NODE_ID)
             {
-               if(info == NULL)
+               if(!node_id_found && free_info == NULL)
                {
-                  neighbors_[i].node_id = node_id;
-                  num_neighbors_++;
-                  info = &neighbors_[i];
+                  free_info = &neighbors_[i];
                }
             }
             else  //entry is not empty
             {
                if(neighbors_[i].node_id == node_id)
                {
-                  info = &neighbors_[i];
+                  neighbors_[i].distance = distance * SMOOTHING_FACTOR +  neighbors_[i].distance * (1-SMOOTHING_FACTOR);
+                  neighbors_[i].last_update_time = cur_time;
+                  node_id_found = true;
                }
                else
                {
@@ -381,17 +391,31 @@ namespace wiselib
                      else if(sizeof(int)==2) debug_->debug("Deleted: %04X%04X%04X%04X", (uint16_t) (node_id>>48), (uint16_t) (node_id>>32), (uint16_t) (node_id>>16), (uint16_t) (node_id>>0)); //For Arduino
 #endif
                     neighbors_[i].node_id = ExtendedRadio::NULL_NODE_ID;
+                    if(!node_id_found)
+                    {
+                       free_info = &neighbors_[i];
+                    }
                     num_neighbors_--;
                  }
               }
             }
          }
-         if(info != NULL)
+         //insert this new info
+         if(!node_id_found)
          {
-            info->distance = distance * SMOOTHING_FACTOR +  info->distance * (1-SMOOTHING_FACTOR);
-            info->last_update_time = cur_time;
+            if(free_info != NULL)
+            {
+               free_info->node_id = node_id;
+               free_info->distance = distance;
+               free_info->last_update_time = cur_time;
+               num_neighbors_--;
+            }
+            else
+            {
+               //To avoid a full list increase the MAX_ANCHORS parameter!
+               debug_->debug("List of nearby neighbors is full!");
+            }
          }
-//TODO: else = the list is full :(
       }
 
 

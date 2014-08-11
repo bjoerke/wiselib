@@ -1,3 +1,9 @@
+/**
+ This app demonstrates the use of BLE for arduino. It scans for nearby iBeacons and uses them for localization.
+ Furthermore it sends advertisements to act as an iBeacon. Further information about the required hardware, see
+ wiselib.testing/externel_interfaces/arduino/arduino_ble_radio.
+*/
+
 #include "external_interface/arduino/arduino_application.h"
 #include "external_interface/arduino/arduino_os.h"
 #include "external_interface/arduino/arduino_debug.h"

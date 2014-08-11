@@ -65,6 +65,8 @@ namespace wiselib
     *
     * IMPORTANT: There are no dedicated nodes in the network
     *            You can just broadcast to all nodes which will send advertisement data
+    *
+    * \tparam OsModel_P  Os to use
     */
    template<typename OsModel_P>
    class ArduinoBleRadio : public ExtendedRadioBase<OsModel_P, uint64_t, uint8_t, uint8_t>  //OsModel, NodeId, Size, BlockData
