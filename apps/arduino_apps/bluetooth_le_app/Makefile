@@ -42,7 +42,6 @@ example.elf: example_app.cpp
 	avr-strip $@
 
 upload:
-	touch example_app.cpp #TODO: remove this later, it just forces example_app to be compiled everytime
 	avrdude -V -F -p m328p -c arduino -b 115200 -Uflash:w:example.hex -P$(PORT)
 
 clean:

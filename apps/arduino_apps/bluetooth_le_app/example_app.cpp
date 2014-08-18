@@ -1,7 +1,18 @@
 /**
- This app demonstrates the use of BLE for arduino. It scans for nearby iBeacons and uses them for localization.
- Furthermore it sends advertisements to act as an iBeacon. Further information about the required hardware, see
- wiselib.testing/externel_interfaces/arduino/arduino_ble_radio.
+ This app demonstrates the use of Bluetooth Low Energy (BLE) for arduino.
+ It scans for nearby iBeacons and uses them for localization.
+ Furthermore it sends advertisements to act as an iBeacon.
+
+ To run this app you need this BLE shield:
+   http://imall.iteadstudio.com/development-platform/arduino/shields/im130704001.html
+ Then you have to flash my custom firmware on the shield's SoC (requires soldering):
+   https://github.com/bjoerke/HM-10-Firmware
+ 
+ For further information about hardware, see
+    wiselib.testing/externel_interfaces/arduino/arduino_ble_radio.
+
+ You may want to try this app for Android first:
+    apps/android/bluetooth_le_app
 */
 
 #include "external_interface/arduino/arduino_application.h"
@@ -9,7 +20,6 @@
 #include "external_interface/arduino/arduino_debug.h"
 #include "external_interface/arduino/arduino_ble_radio.h"
 #include "algorithms/localization/link_metric_based/link_metric_based_localization.h"
-#include "algorithms/localization/link_metric_based/distance_estimation/static.h"
 #include "algorithms/localization/link_metric_based/distance_estimation/ibeacon.h"
 #include "algorithms/localization/link_metric_based/coordinate3d.h"
 
@@ -23,10 +33,7 @@ typedef Os::Clock Clock;
 
 typedef float Arithmetic;
 typedef wiselib::IBeaconDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
-//only returns a constant distance
-  //typedef wiselib::StaticDistanceEstimation<Os, BleRadio, Arithmetic> DistanceEstimation;
-//distance estimation based on iBeacon data and RSSI
-  typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
+typedef wiselib::LinkMetricBasedLocalization<Os, BleRadio, DistanceEstimation, Arithmetic> Localization;
 
 typedef BleRadio::node_id_t node_id_t;
 typedef BleRadio::block_data_t block_data_t;
